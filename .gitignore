@@ -1,0 +1,27 @@
+# Virtual machines / disks
+*.vdi
+*.vhd
+*.vhdx
+*.vmdk
+*.ova
+*.ovf
+
+# Installation media
+*.iso
+
+# Credentials / secrets
+*.key
+*.pfx
+*.p12
+*.env
+*.env.*
+
+# Windows temporary files
+Thumbs.db
+Desktop.ini
+
+# Editor files
+.vscode/
+
+# Local editor history
+.history/
