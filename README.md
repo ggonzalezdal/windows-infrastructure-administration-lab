@@ -28,7 +28,7 @@ Hands-on lab for building, administering, automating, troubleshooting, and recov
 | --- | --- | --- | --- |
 | WIN-DC01 | Windows Server 2025 Standard Evaluation | Deployed | AD DS, DNS, Domain Controller |
 | WIN-SRV01 | Windows Server | Planned | Member server / infrastructure services |
-| WIN-CLIENT01 | Windows 11 | Planned | Domain workstation |
+| WIN-CL01 | Windows 11 | Planned | Domain workstation |
 
 ### Network Design
 
@@ -56,12 +56,12 @@ The NAT interface owns the default route and is excluded from AD DNS registratio
 ## Active Directory Environment
 
 ```text
-Forest:          winlab.test
-Domain:          winlab.test
-NetBIOS domain:  WINLAB
+Forest:            winlab.test
+Domain:            winlab.test
+NetBIOS domain:    WINLAB
 Domain Controller: WIN-DC01
-DC FQDN:         WIN-DC01.winlab.test
-DNS server:      10.20.20.10
+DC FQDN:           WIN-DC01.winlab.test
+DNS server:        10.20.20.10
 ```
 
 `WIN-DC01` is currently the first and only Domain Controller, Global Catalog, and holder of all FSMO roles in the lab.
@@ -75,8 +75,8 @@ DNS server:      10.20.20.10
 - Installed VirtualBox Guest Additions.
 - Configured bidirectional clipboard integration.
 - Configured the host/guest shared folder:
-  - Host: `C:\VM-Share`
-  - Guest: `\\VBOXSVR\VM-Share`
+  - Host: `C:\VM-Share\`
+  - Guest: `\\VBOXSVR\VM-Share\`
 - Renamed the server to `WIN-DC01`.
 - Configured Spanish keyboard input while retaining the English Windows display language.
 - Configured Num Lock to remain enabled across reboots.
@@ -103,6 +103,38 @@ DNS server:      10.20.20.10
 - Restricted the DNS Server service to `10.20.20.10`.
 - Verified after a full reboot that `WIN-DC01.winlab.test` publishes only the internal IPv4 address.
 
+### Active Directory Administration
+
+- Explored the default Active Directory domain structure and built-in containers.
+- Distinguished Active Directory containers from Organizational Units (OUs).
+- Created the custom `WINLAB` OU hierarchy:
+
+```text
+winlab.test
+└── WINLAB
+    ├── Groups
+    ├── Servers
+    ├── Users
+    └── Workstations
+```
+
+- Created `Alice Morgan` through Active Directory Users and Computers (ADUC).
+- Created `Bob Carter` with PowerShell.
+- Practiced user account administration:
+  - Querying users with `Get-ADUser`
+  - Enabling and disabling accounts
+  - Resetting passwords
+  - Requiring password changes at next logon
+  - Modifying user attributes with `Set-ADUser`
+  - Filtering users by directory attributes
+- Created the `GG-IT` Global Security group.
+- Added Alice Morgan and Bob Carter to `GG-IT`.
+- Created the `DL-IT-Modify` Domain Local Security group.
+- Nested `GG-IT` inside `DL-IT-Modify`.
+- Introduced and implemented the `A → G → DL → P` (AGDLP) permissions model.
+- Practiced moving Active Directory objects between OUs with `Move-ADObject`.
+- Used PowerShell to inspect Organizational Units, Distinguished Names, users, groups, and group membership.
+
 ## DNS Multihoming Fix
 
 The Domain Controller originally registered both its internal address (`10.20.20.10`) and VirtualBox NAT address (`10.0.2.15`) in the AD DNS zone.
@@ -119,7 +151,9 @@ The DNS Server was then restricted to the internal AD interface:
 
 ```powershell
 $dns = Get-DnsServerSetting -All
+
 $dns.ListeningIPAddress = @("10.20.20.10")
+
 Set-DnsServerSetting -InputObject $dns
 ```
 
@@ -141,10 +175,11 @@ WIN-DC01.winlab.test -> 10.20.20.10
 
 - `docs/01-windows-server-foundation.md` — Windows Server VM preparation, Guest Additions, server identity, updates, and two-NIC network foundation
 - `docs/02-active-directory-dns.md` — First Domain Controller, AD DS, DNS, multihomed DNS troubleshooting, and final validation
+- `docs/03-active-directory-administration.md` — OU design, domain users, security groups, PowerShell administration, nested groups, and AGDLP foundations
 
 ## Current Status
 
-**Windows Server foundation and first Domain Controller deployment complete.**
+**Active Directory administration foundation complete.**
 
 Current validated state:
 
@@ -156,17 +191,30 @@ Current validated state:
 - Internet connectivity retained through the VirtualBox NAT adapter.
 - NAT interface excluded from AD DNS registration.
 - DNS configuration verified after reboot.
+- Custom `WINLAB` OU hierarchy deployed.
+- Domain user accounts created and administered.
+- Global and Domain Local security groups created.
+- Nested group membership validated.
+- AGDLP permissions model introduced.
+- Active Directory administration performed through both ADUC and PowerShell.
 
 ## Next Phase
 
-**Active Directory Administration**
+**Domain Client Deployment and Domain Join**
 
-Next work will introduce the logical administration layer of the domain:
+The next phase will deploy the first Windows workstation, `WIN-CL01`.
 
-- Organizational Units (OUs)
-- Domain users
-- Security groups
-- User/group administration with PowerShell
-- Preparation for the first domain-joined Windows client
+Planned work:
 
-A later phase will deploy `WIN-CLIENT01`, configure it to use `10.20.20.10` for DNS, join it to `winlab.test`, and begin Group Policy administration.
+- Create the Windows 11 client VM in VirtualBox.
+- Connect `WIN-CL01` to the internal `win-lab` network.
+- Configure client networking.
+- Configure `10.20.20.10` as the client's DNS server.
+- Validate DNS and Domain Controller discovery.
+- Join `WIN-CL01` to the `winlab.test` domain.
+- Verify the new computer object in Active Directory.
+- Move the computer object into the `WINLAB\Workstations` OU.
+- Log into the workstation using a domain user account.
+- Validate centralized domain authentication.
+
+This domain-joined workstation will provide the foundation for the following Group Policy phase.
