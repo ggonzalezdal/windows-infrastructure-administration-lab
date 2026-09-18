@@ -28,7 +28,7 @@ Hands-on lab for building, administering, automating, troubleshooting, and recov
 | --- | --- | --- | --- |
 | WIN-DC01 | Windows Server 2025 Standard Evaluation | Deployed | AD DS, DNS, Domain Controller |
 | WIN-SRV01 | Windows Server | Planned | Member server / infrastructure services |
-| WIN-CL01 | Windows 11 | Planned | Domain workstation |
+| WIN-CL01 | Windows 11 Pro | Deployed | AD domain member workstation |
 
 ### Network Design
 
@@ -51,7 +51,16 @@ The internal Active Directory network is:
 10.20.20.10
 ```
 
-The NAT interface owns the default route and is excluded from AD DNS registration.
+`WIN-CL01` is connected to the internal `win-lab` network with:
+
+```text
+IPv4: 10.20.20.20/24
+DNS:  10.20.20.10
+```
+
+The NAT interface on `WIN-DC01` owns the default route and is excluded from AD DNS registration.
+
+`WIN-CL01` currently has no default gateway, so Internet access from the client is not yet configured.
 
 ## Active Directory Environment
 
@@ -62,6 +71,8 @@ NetBIOS domain:    WINLAB
 Domain Controller: WIN-DC01
 DC FQDN:           WIN-DC01.winlab.test
 DNS server:        10.20.20.10
+Domain client:     WIN-CL01
+Client IPv4:       10.20.20.20
 ```
 
 `WIN-DC01` is currently the first and only Domain Controller, Global Catalog, and holder of all FSMO roles in the lab.
@@ -135,6 +146,27 @@ winlab.test
 - Practiced moving Active Directory objects between OUs with `Move-ADObject`.
 - Used PowerShell to inspect Organizational Units, Distinguished Names, users, groups, and group membership.
 
+### Domain Client Deployment
+
+- Created and installed the `WIN-CL01` Windows 11 Pro VirtualBox VM.
+- Installed VirtualBox Guest Additions and configured guest integration.
+- Created the `00-fresh-windows-install` snapshot.
+- Renamed the workstation to `WIN-CL01`.
+- Connected `WIN-CL01` to the internal `win-lab` network.
+- Configured static IPv4 address `10.20.20.20/24`.
+- Configured `10.20.20.10` (`WIN-DC01`) as the client's DNS server.
+- Verified connectivity to `WIN-DC01`.
+- Verified DNS resolution for `WIN-DC01.winlab.test`.
+- Verified Active Directory LDAP SRV service discovery.
+- Verified Domain Controller discovery with `nltest /dsgetdc:winlab.test`.
+- Verified domain credentials against `WIN-DC01`.
+- Documented troubleshooting of a PowerShell `Add-Computer` failure/hang.
+- Successfully joined `WIN-CL01` to `winlab.test` through Windows System Properties.
+- Successfully logged into the workstation as `WINLAB\Administrator`.
+- Verified `WIN-CL01` as an Active Directory `MemberWorkstation`.
+- Verified local login syntax using `.\localadmin`.
+- Created the `01-domain-joined` VirtualBox snapshot.
+
 ## DNS Multihoming Fix
 
 The Domain Controller originally registered both its internal address (`10.20.20.10`) and VirtualBox NAT address (`10.0.2.15`) in the AD DNS zone.
@@ -176,10 +208,11 @@ WIN-DC01.winlab.test -> 10.20.20.10
 - `docs/01-windows-server-foundation.md` — Windows Server VM preparation, Guest Additions, server identity, updates, and two-NIC network foundation
 - `docs/02-active-directory-dns.md` — First Domain Controller, AD DS, DNS, multihomed DNS troubleshooting, and final validation
 - `docs/03-active-directory-administration.md` — OU design, domain users, security groups, PowerShell administration, nested groups, and AGDLP foundations
+- `docs/04-domain-client.md` — Windows 11 client deployment, static networking, AD DNS/DC discovery, domain join, authentication verification, and troubleshooting
 
 ## Current Status
 
-**Active Directory administration foundation complete.**
+**Domain client deployment and domain join complete.**
 
 Current validated state:
 
@@ -188,7 +221,7 @@ Current validated state:
 - AD-integrated DNS operational.
 - Internal AD network operational at `10.20.20.0/24`.
 - Domain Controller/DNS address: `10.20.20.10`.
-- Internet connectivity retained through the VirtualBox NAT adapter.
+- Internet connectivity retained on `WIN-DC01` through the VirtualBox NAT adapter.
 - NAT interface excluded from AD DNS registration.
 - DNS configuration verified after reboot.
 - Custom `WINLAB` OU hierarchy deployed.
@@ -197,24 +230,23 @@ Current validated state:
 - Nested group membership validated.
 - AGDLP permissions model introduced.
 - Active Directory administration performed through both ADUC and PowerShell.
+- `WIN-CL01` deployed with Windows 11 Pro.
+- `WIN-CL01` configured as `10.20.20.20/24`.
+- Client DNS configured to `WIN-DC01` at `10.20.20.10`.
+- Active Directory DNS and Domain Controller discovery validated from the client.
+- `WIN-CL01` successfully joined to `winlab.test`.
+- `WIN-CL01` validated as an Active Directory `MemberWorkstation`.
+- Domain authentication successfully tested from `WIN-CL01`.
+- `01-domain-joined` snapshot created.
 
 ## Next Phase
 
-**Domain Client Deployment and Domain Join**
+**Domain Client Finalization and Group Policy**
 
-The next phase will deploy the first Windows workstation, `WIN-CL01`.
+Immediate next steps:
 
-Planned work:
-
-- Create the Windows 11 client VM in VirtualBox.
-- Connect `WIN-CL01` to the internal `win-lab` network.
-- Configure client networking.
-- Configure `10.20.20.10` as the client's DNS server.
-- Validate DNS and Domain Controller discovery.
-- Join `WIN-CL01` to the `winlab.test` domain.
-- Verify the new computer object in Active Directory.
-- Move the computer object into the `WINLAB\Workstations` OU.
-- Log into the workstation using a domain user account.
-- Validate centralized domain authentication.
-
-This domain-joined workstation will provide the foundation for the following Group Policy phase.
+- Verify the `WIN-CL01` computer object from `WIN-DC01`.
+- Move `WIN-CL01` into the `WINLAB\Workstations` OU.
+- Test interactive login with a standard domain user such as Alice Morgan or Bob Carter.
+- Provide controlled Internet connectivity for the internal client network.
+- Begin Group Policy administration using the domain-joined workstation.

@@ -1,5 +1,34 @@
 # Changelog
 
+## 2026-09-18
+
+### Domain Client Deployment and Domain Join
+
+- Deployed the first Windows 11 Pro domain client, `WIN-CL01`, in VirtualBox.
+- Installed VirtualBox Guest Additions and configured guest integration.
+- Created the initial `00-fresh-windows-install` snapshot.
+- Renamed the workstation to `WIN-CL01`.
+- Connected `WIN-CL01` to the internal VirtualBox network `win-lab`.
+- Identified the initial APIPA configuration caused by the absence of DHCP on the internal network.
+- Configured static IPv4 address `10.20.20.20/24`.
+- Configured `WIN-DC01` (`10.20.20.10`) as the client's DNS server.
+- Verified connectivity between `WIN-CL01` and `WIN-DC01`.
+- Verified DNS resolution for `WIN-DC01.winlab.test`.
+- Verified Active Directory LDAP SRV service discovery.
+- Verified Windows Domain Controller discovery with `nltest /dsgetdc:winlab.test`.
+- Verified domain credentials against `WIN-DC01`.
+- Troubleshot a PowerShell `Add-Computer` domain-join failure and subsequent hang.
+- Confirmed that DNS, DC discovery, required connectivity, and domain credentials were operational.
+- Completed the domain join successfully through Windows System Properties (`sysdm.cpl`).
+- Restarted `WIN-CL01` and successfully authenticated as `WINLAB\Administrator`.
+- Verified `WIN-CL01` as a `MemberWorkstation` in the `winlab.test` domain.
+- Verified the distinction between local (`.\localadmin`) and domain (`WINLAB\user`) authentication.
+- Documented that `WIN-CL01` currently has no default gateway and therefore no Internet connectivity.
+- Created the `01-domain-joined` VirtualBox snapshot.
+- Added `docs/04-domain-client.md`.
+- Updated `README.md` and `LAB_STATUS.md` to reflect the first deployed and domain-joined Windows client.
+- Prepared the lab for computer-object finalization, standard domain-user testing, Internet access design, and Group Policy administration.
+
 ## 2026-09-17
 
 ### Active Directory Administration
