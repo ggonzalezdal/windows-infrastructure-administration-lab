@@ -2,19 +2,19 @@
 
 ## Current Phase
 
-**Phase 4 --- Domain Client Deployment and Domain Join --- COMPLETE**
+**Phase 5 --- Group Policy Administration --- COMPLETE**
 
-The lab now has a functioning Active Directory domain and its first
-fully validated domain-joined Windows 11 workstation.
+The lab now has a functioning Active Directory domain, a validated
+Windows 11 domain workstation, and working centralized Group Policy
+administration.
 
-`WIN-CL01` has been deployed, configured on the internal Active
-Directory network, joined to `winlab.test`, placed in the
-`WINLAB\Workstations` OU, and successfully tested with standard
-domain-user logins.
+Both computer-side and user-side GPO processing have been validated on
+`WIN-CL01`. Group Policy can now be refreshed and inspected both locally
+and remotely from `WIN-DC01`.
 
 The next phase is:
 
-**Phase 5 --- Group Policy Administration**
+**Phase 6 --- Member Server, File Services, and AGDLP Permissions**
 
 ------------------------------------------------------------------------
 
@@ -33,13 +33,13 @@ Hypervisor:  VirtualBox 7.2.x
   -----------------------------------------------------------------------
   VM                      State                   Role
   ----------------------- ----------------------- -----------------------
-  WIN-DC01                Deployed / operational  Domain Controller, AD
+  `WIN-DC01`              Deployed / operational  Domain Controller, AD
                                                   DS, DNS
 
-  WIN-SRV01               Planned                 Member server /
+  `WIN-SRV01`             Planned                 Member server /
                                                   infrastructure services
 
-  WIN-CL01                Deployed / domain       Windows 11 domain
+  `WIN-CL01`              Deployed / domain       Windows 11 domain
                           joined / validated      workstation
   -----------------------------------------------------------------------
 
@@ -59,6 +59,7 @@ FQDN:            WIN-DC01.winlab.test
 -   A Global Catalog.
 -   The authoritative DNS server for the lab domain.
 -   The holder of all FSMO roles.
+-   The central Group Policy administration system for the lab.
 
 ### WIN-CL01
 
@@ -82,6 +83,13 @@ AD location:     WINLAB\Workstations
 -   Successfully validated using the domain accounts `alice.morgan` and
     `bob.carter`.
 -   Using `WIN-DC01` as the verified domain logon server.
+-   Receiving the `WINLAB - Workstation Baseline` computer GPO.
+-   Able to process the `WINLAB - User Baseline` for users in
+    `WINLAB\Users`.
+-   Configured for remote Group Policy Results through the required WMI
+    firewall access.
+-   Configured for remote Group Policy Update through Domain-profile
+    Remote Scheduled Tasks Management RPC firewall access.
 -   Able to use the local `localadmin` account with explicit
     local-account syntax such as `.\localadmin`.
 -   Not yet configured with a default gateway, so Internet connectivity
@@ -143,6 +151,7 @@ The following infrastructure is operational:
 -   First Windows client successfully joined to the domain
 -   First Windows client placed in the workstation OU
 -   Standard domain-user authentication validated from the client
+-   Computer and user Group Policy processing validated
 
 Custom Organizational Unit structure:
 
@@ -152,16 +161,10 @@ winlab.test
     ├── Groups
     ├── Servers
     ├── Users
+    │   ├── Alice Morgan
+    │   └── Bob Carter
     └── Workstations
         └── WIN-CL01
-```
-
-Current lab identities:
-
-``` text
-WINLAB\Users
-├── Alice Morgan (alice.morgan)
-└── Bob Carter   (bob.carter)
 ```
 
 Current security group design:
@@ -178,98 +181,22 @@ Bob Carter ───┘
 -   Alice Morgan and Bob Carter are members of `GG-IT`.
 -   `GG-IT` is nested inside `DL-IT-Modify`.
 -   AGDLP (`Accounts → Global → Domain Local → Permissions`) has been
-    introduced and implemented through the group-nesting stage.
-
-Active Directory administration practiced through ADUC and PowerShell
-includes:
-
--   Inspecting Organizational Units and Distinguished Names.
--   Creating domain users.
--   Querying and filtering users with `Get-ADUser`.
--   Enabling and disabling accounts.
--   Resetting passwords.
--   Requiring password changes at next logon.
--   Modifying user attributes with `Set-ADUser`.
--   Creating Global and Domain Local security groups.
--   Managing group membership.
--   Moving Active Directory objects between OUs.
--   Verifying and organizing domain computer objects.
+    implemented through the group-nesting stage.
 
 ### Domain Client Validation
 
-`WIN-CL01` was configured with:
+`WIN-CL01` is configured with:
 
 ``` text
 IPv4: 10.20.20.20/24
 DNS:  10.20.20.10
 ```
 
-Connectivity to `WIN-DC01` was verified.
+Connectivity, DNS resolution, LDAP SRV discovery, Domain Controller
+discovery, domain membership, and standard-user authentication have all
+been validated.
 
-Active Directory DNS resolution was validated:
-
-``` powershell
-Resolve-DnsName WIN-DC01.winlab.test
-```
-
-Active Directory LDAP service discovery was validated:
-
-``` powershell
-Resolve-DnsName -Type SRV _ldap._tcp.dc._msdcs.winlab.test
-```
-
-Windows Domain Controller discovery was validated:
-
-``` powershell
-nltest /dsgetdc:winlab.test
-```
-
-Domain credentials were successfully validated against `WIN-DC01`.
-
-A PowerShell `Add-Computer` domain-join attempt returned
-`Access is denied`, and a subsequent attempt hung. DNS, DC discovery,
-connectivity, and credentials were verified as operational. The root
-cause of the PowerShell-specific failure was not determined.
-
-The domain join was successfully completed through Windows System
-Properties:
-
-``` text
-sysdm.cpl
-→ Computer Name
-→ Change
-→ Domain: winlab.test
-```
-
-After reboot, administrator domain authentication was verified:
-
-``` powershell
-whoami
-```
-
-Result:
-
-``` text
-winlab\administrator
-```
-
-Domain membership was verified:
-
-``` powershell
-Get-ComputerInfo |
-    Select-Object CsName,CsDomain,CsDomainRole
-```
-
-Result:
-
-``` text
-CsName    CsDomain      CsDomainRole
-------    --------      ------------
-WIN-CL01  winlab.test   MemberWorkstation
-```
-
-The `WIN-CL01` computer object was then verified in Active Directory and
-moved from the default `Computers` container to:
+The workstation computer object is located at:
 
 ``` text
 winlab.test
@@ -278,38 +205,159 @@ winlab.test
         └── WIN-CL01
 ```
 
-Interactive domain authentication was tested with Alice Morgan:
+Interactive authentication has been successfully tested with:
+
+``` text
+WINLAB\alice.morgan
+WINLAB\bob.carter
+```
+
+`WIN-DC01` is verified as the domain logon server.
+
+The earlier PowerShell `Add-Computer` domain-join failure/hang remains
+documented; the domain join itself was successfully completed through
+Windows System Properties.
+
+### Group Policy
+
+Two lab GPOs are currently deployed.
+
+#### Workstation Baseline
+
+``` text
+WINLAB - Workstation Baseline
+```
+
+Linked to:
+
+``` text
+WINLAB\Workstations
+```
+
+Computer policy processing was verified on `WIN-CL01` with:
 
 ``` powershell
-whoami
-hostname
-$env:USERDOMAIN
-$env:LOGONSERVER
+gpresult /scope computer /r
 ```
 
-Result:
+Applied computer GPOs included:
 
 ``` text
-winlab\alice.morgan
-WIN-CL01
-WINLAB
-\\WIN-DC01
+WINLAB - Workstation Baseline
+Default Domain Policy
 ```
 
-During Alice's first login, the required password change also
-demonstrated enforcement of the domain password policy.
-
-Interactive domain authentication was then tested with Bob Carter:
+#### User Baseline
 
 ``` text
-winlab\bob.carter
-WIN-CL01
-WINLAB
-\\WIN-DC01
+WINLAB - User Baseline
 ```
 
-Both standard domain users therefore authenticate successfully on
-`WIN-CL01`, with `WIN-DC01` verified as the logon server.
+Linked to:
+
+``` text
+WINLAB\Users
+```
+
+The following user policy was configured:
+
+``` text
+User Configuration
+└── Policies
+    └── Administrative Templates
+        └── Control Panel
+            └── Personalization
+                └── Prevent changing desktop background = Enabled
+```
+
+Alice's user policy was refreshed locally with:
+
+``` powershell
+gpupdate /target:user /force
+```
+
+and verified with:
+
+``` powershell
+gpresult /r
+```
+
+The result confirmed:
+
+``` text
+Applied Group Policy Objects
+    WINLAB - User Baseline
+```
+
+The Windows 11 desktop background controls were visibly disabled while
+Alice's existing wallpaper remained unchanged.
+
+### Remote Group Policy Administration
+
+Remote Group Policy Results was tested from `WIN-DC01`.
+
+The initial attempt failed because the required WMI firewall rules on
+`WIN-CL01` were disabled. RPC connectivity and the `RpcSs` and `Winmgmt`
+services were verified before identifying the firewall configuration as
+the blocker.
+
+After enabling the required WMI firewall access, GPMC successfully
+generated remote RSoP information for Alice on `WIN-CL01`.
+
+Remote Group Policy Update was then tested from:
+
+``` text
+WINLAB
+└── Workstations
+    └── Group Policy Update...
+```
+
+The first attempt failed with:
+
+``` text
+Error Code: 8007071a
+```
+
+The Domain-profile Remote Scheduled Tasks Management rules were found
+disabled.
+
+Only the required Domain-profile rules were enabled:
+
+``` powershell
+Get-NetFirewallRule -DisplayGroup "Remote Scheduled Tasks Management" |
+    Where-Object { $_.Profile -eq "Domain" } |
+    Enable-NetFirewallRule
+```
+
+Verified state:
+
+``` text
+Remote Scheduled Tasks Management (RPC)        True   Domain           Inbound
+Remote Scheduled Tasks Management (RPC-EPMAP)  True   Domain           Inbound
+Remote Scheduled Tasks Management (RPC)        False  Private, Public  Inbound
+Remote Scheduled Tasks Management (RPC-EPMAP)  False  Private, Public  Inbound
+```
+
+The remote Group Policy Update was retried and succeeded:
+
+``` text
+Completed (1 of 1)
+Succeeded (1)
+WIN-CL01.winlab.test
+```
+
+The refresh was verified from Alice's session:
+
+``` text
+Last time Group Policy was applied: 9/20/2026 at 8:19:50 AM
+Group Policy was applied from:      WIN-DC01.winlab.test
+
+Applied Group Policy Objects
+    WINLAB - User Baseline
+```
+
+This established working centralized policy inspection and refresh from
+the Domain Controller.
 
 ### DNS
 
@@ -346,7 +394,8 @@ docs/
 ├── 01-windows-server-foundation.md
 ├── 02-active-directory-dns.md
 ├── 03-active-directory-administration.md
-└── 04-domain-client.md
+├── 04-domain-client.md
+└── 05-group-policy.md
 ```
 
 `01-windows-server-foundation.md` documents the Windows Server VM, Guest
@@ -366,60 +415,88 @@ networking, AD DNS and Domain Controller discovery, domain join,
 computer-object placement, standard domain-user authentication,
 local/domain account distinction, and domain-join troubleshooting.
 
+`05-group-policy.md` documents computer and user GPO baselines, policy
+processing, `gpupdate`, `gpresult`, RSoP, remote Group Policy Results,
+WMI/firewall troubleshooting, Remote Scheduled Tasks/RPC requirements,
+and centralized Group Policy Update.
+
 ------------------------------------------------------------------------
 
 ## Next Step
 
-Begin **Phase 5 --- Group Policy Administration**.
+Begin **Phase 6 --- Member Server, File Services, and AGDLP
+Permissions**.
 
 Immediate work:
 
--   Open and explore Group Policy Management on `WIN-DC01`.
--   Understand GPOs, GPO links, scope, inheritance, and the distinction
-    between Computer Configuration and User Configuration.
--   Create the first lab Group Policy Object.
--   Link a workstation-targeted GPO to `WINLAB\Workstations`.
--   Apply and verify the policy from `WIN-CL01`.
--   Practice `gpupdate` and `gpresult`.
--   Provide controlled Internet connectivity for the internal client
-    network in a later networking step.
-
-The domain-joined workstation now provides the client-side foundation
-required for centralized Windows administration and Group Policy
-testing.
+-   Build `WIN-SRV01` as a Windows Server member server.
+-   Connect it to the internal `win-lab` network.
+-   Configure a static IPv4 address and use `WIN-DC01` as DNS.
+-   Join `WIN-SRV01` to `winlab.test`.
+-   Move the server computer object into `WINLAB\Servers`.
+-   Install and configure file services.
+-   Create a realistic departmental domain share.
+-   Assign resource permissions to `DL-IT-Modify`.
+-   Validate the complete AGDLP path:
+    `Accounts → GG-IT → DL-IT-Modify → Permission`.
+-   Test access from `WIN-CL01` using Alice and Bob.
+-   Introduce Group Policy Preferences for centrally mapping the domain
+    share after file services are operational.
+-   Provide controlled Internet connectivity for the internal
+    client/server network in a later networking phase.
 
 ------------------------------------------------------------------------
 
 ## Checkpoint
 
-**Current stable checkpoint: domain workstation joined, organized in
-Active Directory, and validated with standard domain users.**
+**Current stable checkpoint: Active Directory domain, domain
+workstation, and Group Policy foundation operational and remotely
+manageable.**
 
 Validated infrastructure:
 
 ``` text
 WIN-DC01
 10.20.20.10
-AD DS + DNS
+AD DS + DNS + Group Policy administration
      |
      | winlab.test
      |
      +-- WINLAB
           |
+          +-- Users
+          |    |
+          |    +-- Alice Morgan
+          |    +-- Bob Carter
+          |    |
+          |    +-- WINLAB - User Baseline
+          |
+          +-- Groups
+          |    |
+          |    +-- GG-IT
+          |         |
+          |         +--> DL-IT-Modify
+          |
+          +-- Servers
+          |    |
+          |    +-- WIN-SRV01 (planned)
+          |
           +-- Workstations
-                |
-                +-- WIN-CL01
+               |
+               +-- WIN-CL01
                     10.20.20.20
                     MemberWorkstation
-                    Alice/Bob logins verified
+                    WINLAB - Workstation Baseline
+                    Remote RSoP verified
+                    Remote GP Update verified
 ```
 
-VirtualBox snapshots on `WIN-CL01`:
+Existing VirtualBox snapshots on `WIN-CL01` include:
 
 ``` text
 00-fresh-windows-install
 01-domain-joined
 ```
 
-`01-domain-joined` remains the current rollback checkpoint before
-beginning Group Policy administration.
+A new Group Policy milestone snapshot should be created after the
+documentation and Git checkpoint are completed.

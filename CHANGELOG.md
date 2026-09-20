@@ -1,5 +1,83 @@
 # Changelog
 
+## 2026-09-20
+
+### Group Policy Administration
+
+-   Created the `WINLAB - Workstation Baseline` Group Policy Object.
+-   Linked `WINLAB - Workstation Baseline` to the `WINLAB\Workstations`
+    OU.
+-   Verified computer-side Group Policy processing on `WIN-CL01`.
+-   Confirmed with `gpresult /scope computer /r` that `WIN-CL01`
+    receives:
+    -   `WINLAB - Workstation Baseline`
+    -   `Default Domain Policy`
+-   Used Group Policy Results in GPMC from `WIN-DC01` to test remote
+    Resultant Set of Policy (RSoP) collection.
+-   Troubleshot an initial remote Group Policy Results RPC failure.
+-   Verified TCP port 135 connectivity from `WIN-DC01` to `WIN-CL01`.
+-   Verified the `RpcSs` and `Winmgmt` services were running on
+    `WIN-CL01`.
+-   Identified disabled Windows Management Instrumentation (WMI)
+    firewall rules as the blocker for remote Group Policy Results.
+-   Enabled the required WMI firewall access on `WIN-CL01`.
+-   Successfully generated remote Group Policy Results for
+    `WINLAB\alice.morgan` on `WIN-CL01`.
+-   Created the `WINLAB - User Baseline` Group Policy Object.
+-   Linked `WINLAB - User Baseline` to the `WINLAB\Users` OU.
+-   Configured the user Administrative Template policy:
+    `User Configuration → Policies → Administrative Templates → Control Panel → Personalization → Prevent changing desktop background`.
+-   Set `Prevent changing desktop background` to `Enabled`.
+-   Verified the pre-policy state in which Alice Morgan could still
+    access the Windows 11 desktop-background controls.
+-   Forced user-side policy processing locally with:
+
+``` powershell
+gpupdate /target:user /force
+```
+
+-   Verified with `gpresult /r` that `WINLAB\alice.morgan` received
+    `WINLAB - User Baseline`.
+-   Confirmed that Alice's existing wallpaper remained in place while
+    the desktop-background controls became disabled.
+-   Initiated a centralized Group Policy Update from `WIN-DC01` against
+    the `WINLAB\Workstations` OU.
+-   Troubleshot remote Group Policy Update error `8007071a`.
+-   Inspected the Remote Scheduled Tasks Management and Remote Service
+    Management firewall rule groups on `WIN-CL01`.
+-   Identified disabled Domain-profile Remote Scheduled Tasks Management
+    RPC rules as the blocker.
+-   Enabled only the Domain-profile Remote Scheduled Tasks Management
+    rules:
+
+``` powershell
+Get-NetFirewallRule -DisplayGroup "Remote Scheduled Tasks Management" |
+    Where-Object { $_.Profile -eq "Domain" } |
+    Enable-NetFirewallRule
+```
+
+-   Verified that the Domain-profile RPC and RPC-EPMAP rules were
+    enabled while the Private/Public equivalents remained disabled.
+-   Left Remote Service Management rules disabled because they were not
+    required for the operation.
+-   Retried the centralized Group Policy Update from `WIN-DC01`.
+-   Successfully refreshed Group Policy remotely on `WIN-CL01`.
+-   Verified the remote refresh from Alice Morgan's session with
+    `gpresult /r`.
+-   Confirmed the policy refresh timestamp of `9/20/2026 at 8:19:50 AM`
+    and `WIN-DC01.winlab.test` as the policy source.
+-   Demonstrated the distinction between:
+    -   Computer Configuration scoped through the computer object's OU.
+    -   User Configuration scoped through the user object's OU.
+    -   Remote Group Policy Results using WMI.
+    -   Remote Group Policy Update using Remote Scheduled Tasks/RPC.
+-   Added `docs/05-group-policy.md`.
+-   Updated `README.md` and `LAB_STATUS.md` to reflect completion of the
+    Group Policy foundation.
+-   Completed Phase 5 --- Group Policy Administration.
+-   Prepared the lab for Phase 6 --- Member Server, File Services, and
+    AGDLP Permissions.
+
 ## 2026-09-18
 
 ### Domain Client Deployment and Domain Join

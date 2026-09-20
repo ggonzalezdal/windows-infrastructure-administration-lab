@@ -28,15 +28,15 @@ and recovering a realistic Windows domain environment.
   -----------------------------------------------------------------------
   VM                OS                Current State     Role
   ----------------- ----------------- ----------------- -----------------
-  WIN-DC01          Windows Server    Deployed          AD DS, DNS,
+  `WIN-DC01`        Windows Server    Deployed          AD DS, DNS,
                     2025 Standard                       Domain Controller
                     Evaluation                          
 
-  WIN-SRV01         Windows Server    Planned           Member server /
+  `WIN-SRV01`       Windows Server    Planned           Member server /
                                                         infrastructure
                                                         services
 
-  WIN-CL01          Windows 11 Pro    Deployed          AD domain member
+  `WIN-CL01`        Windows 11 Pro    Deployed          AD domain member
                                                         workstation
   -----------------------------------------------------------------------
 
@@ -44,17 +44,17 @@ and recovering a realistic Windows domain environment.
 
 `WIN-DC01` is multihomed with two VirtualBox network adapters:
 
-  -----------------------------------------------------------------------
-  Interface         VirtualBox        Address           Purpose
-                    Network                             
-  ----------------- ----------------- ----------------- -----------------
-  Ethernet          NAT               10.0.2.15/24      Internet
-                                      (DHCP)            connectivity
+  ------------------------------------------------------------------------
+  Interface         VirtualBox        Address            Purpose
+                    Network                              
+  ----------------- ----------------- ------------------ -----------------
+  Ethernet          NAT               `10.0.2.15/24`     Internet
+                                      (DHCP)             connectivity
 
-  Ethernet 2        Internal Network  10.20.20.10/24    Active Directory
-                    `win-lab`         (static)          / DNS / domain
-                                                        traffic
-  -----------------------------------------------------------------------
+  Ethernet 2        Internal Network  `10.20.20.10/24`   Active Directory
+                    `win-lab`         (static)           / DNS / domain
+                                                         traffic
+  ------------------------------------------------------------------------
 
 The internal Active Directory network is:
 
@@ -200,13 +200,54 @@ winlab.test
 -   Verified local login syntax using `.\localadmin`.
 -   Verified the `WIN-CL01` computer object in Active Directory.
 -   Moved `WIN-CL01` into the `WINLAB\Workstations` OU.
--   Successfully logged into `WIN-CL01` as `winlab\alice.morgan`.
--   Successfully logged into `WIN-CL01` as `winlab\bob.carter`.
+-   Successfully logged into `WIN-CL01` as `WINLAB\alice.morgan`.
+-   Successfully logged into `WIN-CL01` as `WINLAB\bob.carter`.
 -   Verified `WINLAB` as the user domain and `WIN-DC01` as the logon
     server.
 -   Observed enforcement of the domain password policy during Alice
     Morgan's first login.
 -   Created the `01-domain-joined` VirtualBox snapshot.
+
+### Group Policy Administration
+
+-   Opened and explored Group Policy Management on `WIN-DC01`.
+-   Practiced GPO creation, linking, scope, inheritance, and Resultant
+    Set of Policy (RSoP) validation.
+-   Created `WINLAB - Workstation Baseline`.
+-   Linked the workstation baseline to `WINLAB\Workstations`.
+-   Verified on `WIN-CL01` that the workstation baseline and inherited
+    `Default Domain Policy` were applied to the computer.
+-   Created `WINLAB - User Baseline`.
+-   Linked the user baseline to `WINLAB\Users`.
+-   Configured the user policy `Prevent changing desktop background`.
+-   Forced user-side policy processing with
+    `gpupdate /target:user /force`.
+-   Verified with `gpresult /r` that Alice Morgan received
+    `WINLAB - User Baseline`.
+-   Confirmed the policy's visible effect by verifying that Windows 11
+    desktop-background controls were disabled while the existing
+    wallpaper remained unchanged.
+-   Used GPMC Group Policy Results from `WIN-DC01` to collect remote
+    RSoP information for `WIN-CL01`.
+-   Troubleshot an initial remote Group Policy Results RPC failure.
+-   Verified RPC endpoint connectivity and the `RpcSs` and `Winmgmt`
+    services.
+-   Identified disabled Windows Management Instrumentation (WMI)
+    firewall rules as the blocker for remote RSoP.
+-   Enabled the required WMI firewall access and successfully collected
+    Group Policy Results remotely.
+-   Initiated a centralized Group Policy Update from the
+    `WINLAB\Workstations` OU.
+-   Troubleshot remote update error `8007071a`.
+-   Identified disabled Domain-profile
+    `Remote Scheduled Tasks Management` RPC firewall rules.
+-   Enabled only the Domain-profile Remote Scheduled Tasks Management
+    rules, leaving Private/Public equivalents disabled.
+-   Successfully triggered a remote Group Policy Update from `WIN-DC01`
+    to `WIN-CL01`.
+-   Verified the resulting refresh on `WIN-CL01` with `gpresult /r`.
+-   Distinguished the remote-management requirements for Group Policy
+    Results (WMI) from Remote Group Policy Update (Scheduled Tasks/RPC).
 
 ## DNS Multihoming Fix
 
@@ -257,11 +298,15 @@ WIN-DC01.winlab.test -> 10.20.20.10
 -   `docs/04-domain-client.md` --- Windows 11 client deployment, static
     networking, AD DNS/DC discovery, domain join, computer-object
     placement, standard domain-user authentication, and troubleshooting
+-   `docs/05-group-policy.md` --- Computer and user GPO baselines,
+    policy processing, `gpupdate`, `gpresult`, RSoP, remote Group Policy
+    Results, firewall troubleshooting, and centralized Group Policy
+    Update
 
 ## Current Status
 
-**Domain client deployment, Active Directory placement, and standard
-domain-user validation complete.**
+**Group Policy foundation and centralized policy administration
+validated.**
 
 Current validated state:
 
@@ -277,35 +322,51 @@ Current validated state:
 -   Custom `WINLAB` OU hierarchy deployed.
 -   Domain user accounts created and administered.
 -   Global and Domain Local security groups created.
--   Nested group membership validated.
--   AGDLP permissions model introduced.
--   Active Directory administration performed through both ADUC and
-    PowerShell.
--   `WIN-CL01` deployed with Windows 11 Pro.
--   `WIN-CL01` configured as `10.20.20.20/24`.
--   Client DNS configured to `WIN-DC01` at `10.20.20.10`.
--   Active Directory DNS and Domain Controller discovery validated from
-    the client.
--   `WIN-CL01` successfully joined to `winlab.test`.
--   `WIN-CL01` validated as an Active Directory `MemberWorkstation`.
--   `WIN-CL01` computer object placed in `WINLAB\Workstations`.
+-   `GG-IT` nested into `DL-IT-Modify` as the foundation of the AGDLP
+    permissions model.
+-   `WIN-CL01` deployed, domain joined, and placed in
+    `WINLAB\Workstations`.
 -   Domain authentication successfully tested with `alice.morgan` and
     `bob.carter`.
--   `WIN-DC01` verified as the domain logon server for both users.
--   `01-domain-joined` snapshot created.
+-   `WIN-DC01` verified as the domain logon server.
+-   `WINLAB - Workstation Baseline` linked to `WINLAB\Workstations` and
+    successfully applied to `WIN-CL01`.
+-   `WINLAB - User Baseline` linked to `WINLAB\Users` and successfully
+    applied to Alice Morgan.
+-   User-side policy enforcement visibly validated on Windows 11.
+-   Local policy refresh and verification validated with `gpupdate` and
+    `gpresult`.
+-   Remote Group Policy Results from `WIN-DC01` to `WIN-CL01`
+    operational.
+-   Required WMI firewall access identified for remote RSoP.
+-   Remote Group Policy Update from `WIN-DC01` to `WIN-CL01`
+    operational.
+-   Required Domain-profile Remote Scheduled Tasks Management RPC
+    firewall access identified and enabled.
+-   Private/Public Remote Scheduled Tasks Management rules remain
+    disabled.
+-   `01-domain-joined` snapshot exists as the previous major checkpoint.
 
 ## Next Phase
 
-**Group Policy Administration**
+**Member Server, File Services, and AGDLP Permissions**
 
 Immediate next steps:
 
--   Open and explore Group Policy Management on `WIN-DC01`.
--   Understand GPOs, links, scope, inheritance, and Computer
-    Configuration vs. User Configuration.
--   Create the first lab Group Policy Object.
--   Link a workstation-targeted GPO to `WINLAB\Workstations`.
--   Apply and verify the policy from `WIN-CL01`.
--   Practice `gpupdate` and `gpresult`.
--   Provide controlled Internet connectivity for the internal client
-    network in a later networking step.
+-   Build `WIN-SRV01` as a Windows Server member server.
+-   Connect `WIN-SRV01` to the internal `win-lab` network.
+-   Configure its static IP and use `WIN-DC01` as DNS.
+-   Join `WIN-SRV01` to the `winlab.test` domain.
+-   Move the server computer object into `WINLAB\Servers`.
+-   Install and configure file services.
+-   Create a domain file share for a realistic departmental resource.
+-   Apply NTFS and share permissions through the existing `DL-IT-Modify`
+    Domain Local group.
+-   Validate the AGDLP path
+    `Accounts → Global → Domain Local → Permissions` using Alice and
+    Bob.
+-   Practice accessing and administering the share from `WIN-CL01`.
+-   Introduce Group Policy Preferences for centrally mapping the domain
+    share after the file service is operational.
+-   Provide controlled Internet connectivity for the internal
+    client/server network in a later networking phase.
